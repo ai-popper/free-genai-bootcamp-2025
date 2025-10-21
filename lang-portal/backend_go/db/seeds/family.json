@@ -1,0 +1,52 @@
+[
+  {
+    "kanji": "家族",
+    "romaji": "kazoku",
+    "english": "family"
+  },
+  {
+    "kanji": "父",
+    "romaji": "chichi",
+    "english": "father"
+  },
+  {
+    "kanji": "母",
+    "romaji": "haha",
+    "english": "mother"
+  },
+  {
+    "kanji": "兄",
+    "romaji": "ani",
+    "english": "older brother"
+  },
+  {
+    "kanji": "姉",
+    "romaji": "ane",
+    "english": "older sister"
+  },
+  {
+    "kanji": "弟",
+    "romaji": "otouto",
+    "english": "younger brother"
+  },
+  {
+    "kanji": "妹",
+    "romaji": "imouto",
+    "english": "younger sister"
+  },
+  {
+    "kanji": "祖父",
+    "romaji": "sofu",
+    "english": "grandfather"
+  },
+  {
+    "kanji": "祖母",
+    "romaji": "sobo",
+    "english": "grandmother"
+  },
+  {
+    "kanji": "子供",
+    "romaji": "kodomo",
+    "english": "child"
+  }
+]

@@ -1,0 +1,52 @@
+[
+  {
+    "kanji": "赤",
+    "romaji": "aka",
+    "english": "red"
+  },
+  {
+    "kanji": "青",
+    "romaji": "ao",
+    "english": "blue"
+  },
+  {
+    "kanji": "黄色",
+    "romaji": "kiiro",
+    "english": "yellow"
+  },
+  {
+    "kanji": "緑",
+    "romaji": "midori",
+    "english": "green"
+  },
+  {
+    "kanji": "白",
+    "romaji": "shiro",
+    "english": "white"
+  },
+  {
+    "kanji": "黒",
+    "romaji": "kuro",
+    "english": "black"
+  },
+  {
+    "kanji": "茶色",
+    "romaji": "chairo",
+    "english": "brown"
+  },
+  {
+    "kanji": "ピンク",
+    "romaji": "pinku",
+    "english": "pink"
+  },
+  {
+    "kanji": "オレンジ",
+    "romaji": "orenji",
+    "english": "orange"
+  },
+  {
+    "kanji": "紫",
+    "romaji": "murasaki",
+    "english": "purple"
+  }
+]

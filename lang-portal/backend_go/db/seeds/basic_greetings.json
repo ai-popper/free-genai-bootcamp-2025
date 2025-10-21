@@ -1,0 +1,52 @@
+[
+  {
+    "kanji": "こんにちは",
+    "romaji": "konnichiwa",
+    "english": "hello"
+  },
+  {
+    "kanji": "おはよう",
+    "romaji": "ohayou",
+    "english": "good morning"
+  },
+  {
+    "kanji": "こんばんは",
+    "romaji": "konbanwa",
+    "english": "good evening"
+  },
+  {
+    "kanji": "さようなら",
+    "romaji": "sayounara",
+    "english": "goodbye"
+  },
+  {
+    "kanji": "ありがとう",
+    "romaji": "arigatou",
+    "english": "thank you"
+  },
+  {
+    "kanji": "すみません",
+    "romaji": "sumimasen",
+    "english": "excuse me"
+  },
+  {
+    "kanji": "ごめんなさい",
+    "romaji": "gomennasai",
+    "english": "I'm sorry"
+  },
+  {
+    "kanji": "はい",
+    "romaji": "hai",
+    "english": "yes"
+  },
+  {
+    "kanji": "いいえ",
+    "romaji": "iie",
+    "english": "no"
+  },
+  {
+    "kanji": "お願いします",
+    "romaji": "onegaishimasu",
+    "english": "please"
+  }
+]

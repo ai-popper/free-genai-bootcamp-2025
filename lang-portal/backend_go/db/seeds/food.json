@@ -1,0 +1,52 @@
+[
+  {
+    "kanji": "食べ物",
+    "romaji": "tabemono",
+    "english": "food"
+  },
+  {
+    "kanji": "水",
+    "romaji": "mizu",
+    "english": "water"
+  },
+  {
+    "kanji": "お茶",
+    "romaji": "ocha",
+    "english": "tea"
+  },
+  {
+    "kanji": "ご飯",
+    "romaji": "gohan",
+    "english": "rice/meal"
+  },
+  {
+    "kanji": "パン",
+    "romaji": "pan",
+    "english": "bread"
+  },
+  {
+    "kanji": "肉",
+    "romaji": "niku",
+    "english": "meat"
+  },
+  {
+    "kanji": "魚",
+    "romaji": "sakana",
+    "english": "fish"
+  },
+  {
+    "kanji": "野菜",
+    "romaji": "yasai",
+    "english": "vegetables"
+  },
+  {
+    "kanji": "果物",
+    "romaji": "kudamono",
+    "english": "fruit"
+  },
+  {
+    "kanji": "牛乳",
+    "romaji": "gyuunyuu",
+    "english": "milk"
+  }
+]
