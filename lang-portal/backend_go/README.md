@@ -250,6 +250,13 @@ curl -X POST http://localhost:8080/api/study_sessions/1/words/5/review \
 curl http://localhost:8080/api/dashboard/quick_stats
 ```
 
+### Running mage commands
+```sh
+go run github.com/magefile/mage@latest testdb
+go run github.com/magefile/mage@latest dbinit
+go run github.com/magefile/mage@latest seed
+```
+
 ## License
 
 MIT

@@ -1,0 +1,52 @@
+require 'rspec/core/rake_task'
+
+# RSpec task for running tests
+RSpec::Core::RakeTask.new(:spec) do |task|
+  task.pattern = 'spec/**/*_spec.rb'
+  task.rspec_opts = '--format documentation --color'
+end
+
+# Default task
+task default: :spec
+
+# Task to run tests with coverage
+task :coverage do
+  ENV['COVERAGE'] = 'true'
+  Rake::Task['spec'].invoke
+end
+
+# Task to run only specific test files
+task :test_dashboard do
+  sh 'rspec spec/requests/dashboard_spec.rb --format documentation --color'
+end
+
+task :test_words do
+  sh 'rspec spec/requests/words_spec.rb --format documentation --color'
+end
+
+task :test_groups do
+  sh 'rspec spec/requests/groups_spec.rb --format documentation --color'
+end
+
+task :test_sessions do
+  sh 'rspec spec/requests/study_sessions_spec.rb --format documentation --color'
+end
+
+task :test_activities do
+  sh 'rspec spec/requests/study_activities_spec.rb --format documentation --color'
+end
+
+task :test_utility do
+  sh 'rspec spec/requests/utility_spec.rb --format documentation --color'
+end
+
+# Task to run all tests
+task :test_all do
+  sh 'rspec spec/ --format documentation --color'
+end
+
+# Task to clean up test artifacts
+task :clean do
+  FileUtils.rm_rf('coverage') if Dir.exist?('coverage')
+  FileUtils.rm_rf('.rspec_status') if File.exist?('.rspec_status')
+end

@@ -4,12 +4,13 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
 
-	"github.com/lang-portal/backend/internal/database"
+	_ "github.com/mattn/go-sqlite3"
 	"github.com/magefile/mage/mg"
 )
 
@@ -20,32 +21,52 @@ type SeedWord struct {
 	English string `json:"english"`
 }
 
-// SeedConfig maps seed files to group names
+// SeedConfig represents configuration for seeding a group of words
 type SeedConfig struct {
 	File      string
 	GroupName string
 }
 
-// Init initializes the database file
-func Init() error {
-	fmt.Println("Initializing database...")
-	
-	dbPath := "words.db"
-	
-	// Check if database already exists
-	if _, err := os.Stat(dbPath); err == nil {
-		fmt.Println("Database already exists at", dbPath)
-		return nil
+// DB initializes the database connection
+func DB() (*sql.DB, error) {
+	dbPath := getDBPath()
+	db, err := sql.Open("sqlite3", dbPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open database: %w", err)
 	}
 	
-	// Create empty database file
+	// Enable foreign keys
+	if _, err := db.Exec("PRAGMA foreign_keys = ON"); err != nil {
+		return nil, fmt.Errorf("failed to enable foreign keys: %w", err)
+	}
+	
+	return db, nil
+}
+
+// getDBPath returns the appropriate database path based on environment
+func getDBPath() string {
+	if os.Getenv("TEST_DB") == "true" {
+		fmt.Println("Using test database: words.test.db")
+		return "words.test.db"
+	}
+	fmt.Println("Using production database: words.db")
+	return "words.db"
+}
+
+// Init creates a new database file if it doesn't exist
+func Init() error {
+	dbPath := getDBPath()
+	if _, err := os.Stat(dbPath); err == nil {
+		fmt.Printf("Database already exists at %s\n", dbPath)
+		return nil
+	}
+
 	file, err := os.Create(dbPath)
 	if err != nil {
 		return fmt.Errorf("failed to create database file: %w", err)
 	}
 	file.Close()
-	
-	fmt.Println("Database file created:", dbPath)
+	fmt.Printf("Created new database at %s\n", dbPath)
 	return nil
 }
 
@@ -53,19 +74,31 @@ func Init() error {
 func Migrate() error {
 	fmt.Println("Running database migrations...")
 	
-	dbPath := "words.db"
-	err := database.InitDB(dbPath)
+	db, err := DB()
 	if err != nil {
 		return fmt.Errorf("failed to connect to database: %w", err)
 	}
-	defer database.CloseDB()
-	
-	migrationsDir := filepath.Join("db", "migrations")
-	err = database.RunMigrations(migrationsDir)
+	defer db.Close()
+
+	// Run migrations
+	migrations, err := filepath.Glob("db/migrations/*.sql")
 	if err != nil {
-		return fmt.Errorf("failed to run migrations: %w", err)
+		return fmt.Errorf("failed to find migration files: %w", err)
 	}
-	
+
+	for _, migration := range migrations {
+		fmt.Printf("Running migration: %s\n", filepath.Base(migration))
+		sqlBytes, err := os.ReadFile(migration)
+		if err != nil {
+			return fmt.Errorf("failed to read migration file %s: %w", migration, err)
+		}
+
+		_, err = db.Exec(string(sqlBytes))
+		if err != nil {
+			return fmt.Errorf("failed to execute migration %s: %w", migration, err)
+		}
+	}
+
 	fmt.Println("Migrations completed successfully")
 	return nil
 }
@@ -74,108 +107,128 @@ func Migrate() error {
 func Seed() error {
 	fmt.Println("Seeding database...")
 	
-	dbPath := "words.db"
-	err := database.InitDB(dbPath)
+	db, err := DB()
 	if err != nil {
 		return fmt.Errorf("failed to connect to database: %w", err)
 	}
-	defer database.CloseDB()
-	
+	defer db.Close()
+
 	// Define seed configurations
 	seedConfigs := []SeedConfig{
 		{File: "db/seeds/basic_greetings.json", GroupName: "Basic Greetings"},
 		{File: "db/seeds/numbers.json", GroupName: "Numbers"},
 		{File: "db/seeds/colors.json", GroupName: "Colors"},
 		{File: "db/seeds/family.json", GroupName: "Family"},
-		{File: "db/seeds/food.json", GroupName: "Food"},
 	}
-	
+
+	// Start a transaction
+	tx, err := db.Begin()
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+
 	for _, config := range seedConfigs {
-		if _, err := os.Stat(config.File); os.IsNotExist(err) {
-			fmt.Printf("Skipping %s (file not found)\n", config.File)
-			continue
-		}
+		fmt.Printf("Processing seed file: %s\n", config.File)
 		
-		err := seedFile(config.File, config.GroupName)
+		// Read the seed file
+		data, err := os.ReadFile(config.File)
 		if err != nil {
-			fmt.Printf("Warning: Failed to seed %s: %v\n", config.File, err)
-			continue
+			tx.Rollback()
+			return fmt.Errorf("failed to read seed file %s: %w", config.File, err)
 		}
-		
-		fmt.Printf("Seeded: %s -> %s\n", config.File, config.GroupName)
+
+		// Parse the JSON data
+		var words []SeedWord
+		if err := json.Unmarshal(data, &words); err != nil {
+			tx.Rollback()
+			return fmt.Errorf("failed to parse seed file %s: %w", config.File, err)
+		}
+
+		// Insert group if it doesn't exist
+		var groupID int64
+		err = tx.QueryRow("INSERT OR IGNORE INTO groups (name) VALUES (?) RETURNING id", config.GroupName).Scan(&groupID)
+		if err == sql.ErrNoRows {
+			err = tx.QueryRow("SELECT id FROM groups WHERE name = ?", config.GroupName).Scan(&groupID)
+		}
+		if err != nil {
+			tx.Rollback()
+			return fmt.Errorf("failed to get/create group %s: %w", config.GroupName, err)
+		}
+
+		// Insert words
+		for _, word := range words {
+			var wordID int64
+			err := tx.QueryRow(`
+				INSERT OR IGNORE INTO words (japanese, romaji, english) 
+				VALUES (?, ?, ?) 
+				RETURNING id
+			`, word.Kanji, word.Romaji, word.English).Scan(&wordID)
+			
+			if err != nil && err != sql.ErrNoRows {
+				tx.Rollback()
+				return fmt.Errorf("failed to insert word %v: %w", word, err)
+			}
+
+			// If word already exists, get its ID
+			if err == sql.ErrNoRows {
+				err = tx.QueryRow("SELECT id FROM words WHERE japanese = ?", word.Kanji).Scan(&wordID)
+				if err != nil {
+					tx.Rollback()
+					return fmt.Errorf("failed to get word ID: %w", err)
+				}
+			}
+
+			// Associate word with group
+			_, err = tx.Exec(`
+				INSERT OR IGNORE INTO words_groups (word_id, group_id) 
+				VALUES (?, ?)
+			`, wordID, groupID)
+			if err != nil {
+				tx.Rollback()
+				return fmt.Errorf("failed to associate word with group: %w", err)
+			}
+		}
 	}
-	
-	fmt.Println("Seeding completed")
+
+	// Commit the transaction
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	fmt.Println("Database seeded successfully!")
 	return nil
 }
 
-// Setup runs Init, Migrate, and Seed in sequence
-func Setup() error {
-	mg.Deps(Init)
-	mg.Deps(Migrate)
-	mg.Deps(Seed)
-	return nil
-}
-
-// seedFile reads a JSON seed file and imports words into a group
-func seedFile(filePath, groupName string) error {
-	// Read file
-	data, err := os.ReadFile(filePath)
-	if err != nil {
-		return fmt.Errorf("failed to read file: %w", err)
-	}
+// Reset drops all tables and recreates them
+func Reset() error {
+	fmt.Println("Resetting database...")
 	
-	// Parse JSON
-	var words []SeedWord
-	err = json.Unmarshal(data, &words)
-	if err != nil {
-		return fmt.Errorf("failed to parse JSON: %w", err)
-	}
+	dbPath := getDBPath()
 	
-	// Create or get group
-	groupID, err := database.InsertGroup(groupName)
-	if err != nil {
-		return fmt.Errorf("failed to create group: %w", err)
-	}
-	
-	// Insert words and link to group
-	for _, word := range words {
-		wordID, err := database.InsertWord(word.Kanji, word.Romaji, word.English, "")
-		if err != nil {
-			return fmt.Errorf("failed to insert word %s: %w", word.Kanji, err)
-		}
-		
-		err = database.LinkWordToGroup(wordID, groupID)
-		if err != nil {
-			return fmt.Errorf("failed to link word to group: %w", err)
-		}
-	}
-	
-	return nil
-}
-
-// Clean removes the database file
-func Clean() error {
-	fmt.Println("Cleaning database...")
-	
-	dbPath := "words.db"
-	if _, err := os.Stat(dbPath); os.IsNotExist(err) {
-		fmt.Println("No database file to clean")
-		return nil
-	}
-	
-	err := os.Remove(dbPath)
-	if err != nil {
+	// Remove existing database
+	if err := os.Remove(dbPath); err != nil && !os.IsNotExist(err) {
 		return fmt.Errorf("failed to remove database: %w", err)
 	}
-	
-	fmt.Println("Database cleaned")
+
+	// Reinitialize database
+	if err := Init(); err != nil {
+		return err
+	}
+	if err := Migrate(); err != nil {
+		return err
+	}
+	if err := Seed(); err != nil {
+		return err
+	}
+
+	fmt.Println("Database reset successfully!")
 	return nil
 }
 
-// Reset cleans and sets up the database from scratch
-func Reset() error {
-	mg.Deps(Clean)
-	mg.Deps(Setup)
+// TestDB runs all database tests
+func TestDB() error {
+	mg.Deps(Reset)
+	fmt.Println("Running database tests...")
+	// Add your test commands here
 	return nil
 }
