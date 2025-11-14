@@ -78,6 +78,10 @@ func main() {
 		c.JSON(200, gin.H{"status": "ok"})
 	})
 
+	router.GET("/", func(c *gin.Context) {
+		c.JSON(200, gin.H{"message": "Welcome to the Language Learning Portal API"})
+	})
+
 	// Start server
 	log.Println("Starting server on :8080")
 	if err := router.Run(":8080"); err != nil {
